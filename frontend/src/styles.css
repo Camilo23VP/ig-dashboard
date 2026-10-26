@@ -55,6 +55,7 @@ code { background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
 .btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
 .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 .btn:disabled { opacity: 0.4; cursor: default; }
+.btn.small { padding: 2px 8px; font-weight: 500; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
 .card { all: unset; cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: transform 0.15s, box-shadow 0.15s; }

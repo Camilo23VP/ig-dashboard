@@ -6,6 +6,7 @@ Docs interactivas en http://localhost:8000/docs
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 import config
 from instagram import InstagramClient, InstagramError
@@ -15,7 +16,7 @@ app = FastAPI(title="IG Dashboard API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[config.FRONTEND_ORIGIN],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -50,6 +51,35 @@ async def posts(limit: int = Query(12, ge=1, le=50), after: str | None = None):
 
 @app.get("/api/posts/{media_id}")
 async def post_detail(media_id: str):
-    post = await client.post(media_id)
-    post["comments"] = await client.comments(media_id)
-    return post
+    return await client.post(media_id)
+
+
+@app.get("/api/posts/{media_id}/comments")
+async def post_comments(media_id: str, limit: int = Query(50, ge=1, le=50), after: str | None = None):
+    return await client.comments(media_id, limit=limit, after=after)
+
+
+# ---------- Moderación ----------
+# Sin autenticación: pensado para uso local. Antes de desplegar hay que protegerlas.
+class HideCommentBody(BaseModel):
+    hidden: bool
+
+
+class CommentsEnabledBody(BaseModel):
+    enabled: bool
+
+
+@app.post("/api/comments/{comment_id}/hide")
+async def hide_comment(comment_id: str, body: HideCommentBody):
+    return await client.hide_comment(comment_id, body.hidden)
+
+
+@app.delete("/api/comments/{comment_id}")
+async def delete_comment(comment_id: str):
+    await client.delete_comment(comment_id)
+    return {"deleted": True, "id": comment_id}
+
+
+@app.post("/api/posts/{media_id}/comments/enabled")
+async def set_comments_enabled(media_id: str, body: CommentsEnabledBody):
+    return await client.set_comments_enabled(media_id, body.enabled)

@@ -2,6 +2,8 @@
 import random
 from datetime import datetime, timedelta, timezone
 
+from instagram import InstagramError
+
 random.seed(7)
 
 USERS = ["laura.dev", "andres_mde", "sofi.law", "juanpa.codes", "vale_rios", "mateo.ux"]
@@ -59,6 +61,7 @@ for n in range(30):
         "shares_count": random.randint(0, 60),
         "total_like_count": None,
         "total_comments_count": None,
+        "is_comment_enabled": True,
     })
 
 
@@ -77,11 +80,46 @@ class MockClient:
         return {"data": POSTS[start:end], "next_cursor": str(end) if end < len(POSTS) else None}
 
     async def post(self, media_id: str) -> dict:
-        for p in POSTS:
-            if p["id"] == media_id:
-                return {**p, "children": []}
-        from instagram import InstagramError
+        return {**self._find_post(media_id), "children": []}
+
+    async def comments(self, media_id: str, limit: int = 50, after: str | None = None) -> dict:
+        all_comments = COMMENTS.get(media_id, [])
+        start = int(after or 0)
+        end = start + limit
+        return {"data": all_comments[start:end], "next_cursor": str(end) if end < len(all_comments) else None}
+
+    # ---------- Moderación (muta los datos en memoria) ----------
+    async def hide_comment(self, comment_id: str, hidden: bool) -> dict:
+        _, comment, _ = self._find_comment(comment_id)
+        comment["hidden"] = hidden
+        return {"id": comment_id, "hidden": hidden}
+
+    async def delete_comment(self, comment_id: str) -> None:
+        media_id, comment, siblings = self._find_comment(comment_id)
+        removed = 1 + len(comment.get("replies", []))
+        siblings.remove(comment)
+        post = self._find_post(media_id)
+        post["comments_count"] = max(0, post["comments_count"] - removed)
+
+    async def set_comments_enabled(self, media_id: str, enabled: bool) -> dict:
+        self._find_post(media_id)["is_comment_enabled"] = enabled
+        return {"id": media_id, "is_comment_enabled": enabled}
+
+    @staticmethod
+    def _find_post(media_id: str) -> dict:
+        for post in POSTS:
+            if post["id"] == media_id:
+                return post
         raise InstagramError(404, "Publicación no encontrada")
 
-    async def comments(self, media_id: str) -> list[dict]:
-        return COMMENTS.get(media_id, [])
+    @staticmethod
+    def _find_comment(comment_id: str) -> tuple[str, dict, list[dict]]:
+        """Devuelve (media_id, comentario, lista que lo contiene) para comentarios y respuestas."""
+        for media_id, comments in COMMENTS.items():
+            for comment in comments:
+                if comment["id"] == comment_id:
+                    return media_id, comment, comments
+                for reply in comment["replies"]:
+                    if reply["id"] == comment_id:
+                        return media_id, reply, comment["replies"]
+        raise InstagramError(404, "Comentario no encontrado")

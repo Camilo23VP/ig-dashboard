@@ -57,7 +57,13 @@ Para obtener `IG_USER_ID` en modo facebook:
 | GET | `/api/status` | Modo actual y si hay reposteos |
 | GET | `/api/profile` | Perfil |
 | GET | `/api/posts?limit=12&after=CURSOR` | Página de publicaciones + `next_cursor` |
-| GET | `/api/posts/{id}` | Publicación + todos sus comentarios con respuestas |
+| GET | `/api/posts/{id}` | Publicación (sin comentarios) |
+| GET | `/api/posts/{id}/comments?limit=50&after=CURSOR` | Página de comentarios con sus respuestas + `next_cursor` |
+| POST | `/api/comments/{id}/hide` `{"hidden": bool}` | Oculta / muestra un comentario |
+| DELETE | `/api/comments/{id}` | Elimina un comentario (irreversible) |
+| POST | `/api/posts/{id}/comments/enabled` `{"enabled": bool}` | Activa / desactiva los comentarios de una publicación |
+
+Las acciones de moderación necesitan el permiso `instagram_business_manage_comments` (modo `instagram`) o `instagram_manage_comments` (modo `facebook`). No tienen autenticación: son para uso local; protégelas antes de desplegar (CORS no es autenticación).
 
 ## Limitaciones de la API (no del proyecto)
 
